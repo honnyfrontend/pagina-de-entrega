@@ -1,0 +1,18 @@
+# Dependências e arquivos de sistema
+node_modules/
+.env
+.DS_Store
+
+# Arquivos de log e temporários
+npm-debug.log*
+*.log
+uploads/
+
+# Pastas de build e temporárias do ambiente
+dist/
+build/
+tmp/
+
+# Configurações de IDEs (opcional, mas recomendado)
+.vscode/
+.idea/
