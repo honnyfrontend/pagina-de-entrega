@@ -1,198 +1,138 @@
+require('dotenv').config();
 const express = require('express');
-const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const { v4: uuidv4 } = require('uuid');
-const path = require('path');
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('cloudinary').v2;
 const cors = require('cors');
-require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-// Configurar Cloudinary
+// Configuração do Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
   api_key: process.env.API_KEY,
-  api_secret: process.env.API_SECRET,
+  api_secret: process.env.API_SECRET
 });
 
-// Configurar middlewares
-app.use(cors());
-app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Conectar ao MongoDB
-mongoose.connect(process.env.MONGO_URI, {
+// Conexão com MongoDB Atlas
+mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
-  useUnifiedTopology: true
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 5000
 })
-  .then(() => console.log('Conectado ao MongoDB'))
-  .catch(err => console.error('Erro ao conectar ao MongoDB:', err));
-
-// Esquema do Mongoose para as fotos
-const photoSchema = new mongoose.Schema({
-  public_id: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  filename: {
-    type: String,
-    required: true
-  },
-  url: {
-    type: String,
-    required: true
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
+.then(() => console.log('Conectado ao MongoDB Atlas (usuariosdb) - Coleções: lumiere_photos e lumiere_batches'))
+.catch(err => {
+  console.error('Erro de conexão ao MongoDB:', err.message);
+  process.exit(1);
 });
 
-const Photo = mongoose.model('Photo', photoSchema);
+// Esquemas específicos para o projeto Lumiere
+const photoSchema = new mongoose.Schema({
+  public_id: { type: String, required: true, unique: true },
+  filename: { type: String, required: true },
+  url: { type: String, required: true },
+  batch_id: { type: mongoose.Schema.Types.ObjectId, ref: 'LumiereBatch' },
+  createdAt: { type: Date, default: Date.now }
+}, { collection: 'lumiere_photos' });
 
-// Configuração do Multer para upload de arquivos com Cloudinary
+const batchSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  description: String,
+  photos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'LumierePhoto' }],
+  createdAt: { type: Date, default: Date.now }
+}, { collection: 'lumiere_batches' });
+
+// Modelos com prefixo Lumiere
+const LumierePhoto = mongoose.model('LumierePhoto', photoSchema);
+const LumiereBatch = mongoose.model('LumiereBatch', batchSchema);
+
+// Configuração do Multer + Cloudinary
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
-  params: (req, file) => {
-    const publicId = `lumiere-visuals-photos/${uuidv4()}`;
-    return {
-      folder: 'lumiere-visuals-photos',
-      format: 'auto',
-      transformation: [{ width: 1920, height: 1080, crop: 'limit' }],
-      public_id: publicId,
-    };
-  }
+  params: (req, file) => ({
+    folder: 'lumiere-visuals',
+    public_id: `lumiere-${uuidv4()}`,
+    transformation: [{ width: 1920, height: 1080, crop: 'limit' }]
+  })
 });
+const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // Limite de 10MB
-});
+// Middlewares
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
 
 // Rotas
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
-
-app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
-});
-
 app.post('/login', (req, res) => {
   const { email, password } = req.body;
   if (email === 'honnyfrontend@gmail.com' && password === 'senha123') {
-    return res.status(200).json({ message: 'Login bem-sucedido!' });
+    return res.json({ message: 'Login bem-sucedido!' });
   }
-  return res.status(401).json({ message: 'Credenciais inválidas' });
+  res.status(401).json({ message: 'Credenciais inválidas' });
 });
 
 app.post('/upload', upload.array('photos', 10), async (req, res) => {
   try {
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ message: 'Nenhum arquivo enviado.' });
-    }
+    // Criar um novo batch para este upload
+    const batch = await LumiereBatch.create({
+      name: `Upload ${new Date().toLocaleString()}`,
+      description: `Upload contendo ${req.files.length} arquivo(s)`
+    });
 
-    const uploadPromises = req.files.map(async (file) => {
-      const newPhoto = new Photo({
+    // Processar cada foto e associar ao batch
+    const uploadPromises = req.files.map(async file => {
+      const photo = await LumierePhoto.create({
         public_id: file.filename,
         filename: file.originalname,
-        url: file.path
+        url: file.path,
+        batch_id: batch._id
       });
-      return newPhoto.save();
+      
+      // Atualizar o batch com a referência da foto
+      batch.photos.push(photo._id);
+      return photo;
     });
 
     await Promise.all(uploadPromises);
-    res.status(200).json({ message: 'Uploads realizados com sucesso!' });
-  } catch (err) {
-    console.error('Erro no upload:', err);
-    res.status(500).json({
-      message: err.message || 'Erro no servidor ao processar o upload.'
+    await batch.save();
+
+    res.json({ 
+      message: `${req.files.length} arquivo(s) enviado(s) com sucesso!`,
+      batchId: batch._id 
     });
+  } catch (err) {
+    res.status(500).json({ message: 'Erro no upload: ' + err.message });
   }
 });
 
 app.get('/photos', async (req, res) => {
   try {
-    const photos = await Photo.find({}).sort({ createdAt: -1 });
-    res.status(200).json({ photos: photos || [] });
+    const photos = await LumierePhoto.find()
+      .populate('batch_id', 'name description')
+      .sort({ createdAt: -1 });
+      
+    res.json({ photos });
   } catch (err) {
-    console.error('Erro ao buscar fotos:', err);
-    res.status(500).json({ message: 'Erro no servidor ao buscar fotos.' });
+    res.status(500).json({ message: 'Erro ao buscar fotos: ' + err.message });
   }
 });
 
-app.get('/download/:publicId', async (req, res) => {
+app.get('/batches', async (req, res) => {
   try {
-    const { publicId } = req.params;
-    const { quality } = req.query;
-
-    if (!publicId) {
-      return res.status(400).json({ message: 'ID da foto não fornecido.' });
-    }
-
-    const photo = await Photo.findOne({ public_id: publicId });
-    if (!photo) {
-      return res.status(404).json({ message: 'Foto não encontrada.' });
-    }
-
-    let options = {
-      flags: 'attachment',
-      secure: true,
-      resource_type: 'image'
-    };
-
-    if (quality && quality !== 'original') {
-      if (quality === 'small') {
-        options.width = 720;
-        options.quality = 70;
-      } else if (quality === 'medium') {
-        options.width = 1080;
-        options.quality = 80;
-      }
-    }
-
-    const downloadUrl = cloudinary.url(publicId, options);
-    res.redirect(downloadUrl);
+    const batches = await LumiereBatch.find()
+      .populate('photos', 'filename url')
+      .sort({ createdAt: -1 });
+      
+    res.json({ batches });
   } catch (err) {
-    console.error('Erro no download:', err);
-    res.status(500).json({ message: 'Erro no servidor ao processar o download.' });
+    res.status(500).json({ message: 'Erro ao buscar batches: ' + err.message });
   }
 });
 
-app.delete('/photos/:publicId', async (req, res) => {
-  try {
-    const { publicId } = req.params;
-
-    if (!publicId) {
-      return res.status(400).json({ message: 'ID da foto não fornecido.' });
-    }
-
-    const cloudinaryResult = await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
-    const dbDeleteResult = await Photo.deleteOne({ public_id: publicId });
-    
-    if (dbDeleteResult.deletedCount === 0) {
-      return res.status(404).json({ message: 'Foto não encontrada no banco de dados.' });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'Foto deletada com sucesso.'
-    });
-  } catch (err) {
-    console.error('Erro ao deletar foto:', err);
-    res.status(500).json({
-      success: false,
-      message: 'Erro no servidor ao deletar a foto.'
-    });
-  }
-});
-
-// Iniciar o servidor
-app.listen(PORT, () => {
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
+// Iniciar servidor
+app.listen(process.env.PORT, () => {
+  console.log(`Servidor Lumiere rodando na porta ${process.env.PORT}`);
+  console.log(`Acesse: http://localhost:${process.env.PORT}`);
 });
