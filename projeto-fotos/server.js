@@ -64,7 +64,7 @@ const storage = new CloudinaryStorage({
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   limits: { fileSize: 10 * 1024 * 1024 } // Limite de 10MB
 });
@@ -92,6 +92,7 @@ app.post('/upload', upload.array('photos', 10), async (req, res) => {
         throw new Error(`Foto ${file.filename} já existe no sistema.`);
       }
 
+      
       const newPhoto = new Photo({
         public_id: file.filename,
         filename: file.originalname,
@@ -105,8 +106,8 @@ app.post('/upload', upload.array('photos', 10), async (req, res) => {
     res.status(200).json({ message: 'Uploads realizados com sucesso!' });
   } catch (err) {
     console.error('Erro no upload:', err);
-    res.status(500).json({ 
-      message: err.message || 'Erro no servidor ao processar o upload.' 
+    res.status(500).json({
+      message: err.message || 'Erro no servidor ao processar o upload.'
     });
   }
 });
@@ -115,7 +116,7 @@ app.post('/upload', upload.array('photos', 10), async (req, res) => {
 app.get('/photos', async (req, res) => {
   try {
     const photos = await Photo.find({}).sort({ createdAt: -1 });
-    
+
     if (!photos || photos.length === 0) {
       return res.status(200).json({ photos: [], message: 'Nenhuma foto encontrada.' });
     }
@@ -145,7 +146,7 @@ app.get('/download/:publicId', async (req, res) => {
     // CORREÇÃO: Remove a duplicação do nome da pasta se existir
     const cleanPublicId = publicId.replace('lumiere-visuals-photos/', '');
     const cloudinaryPublicId = `lumiere-visuals-photos/${cleanPublicId}`;
-    
+
     let options = {
       flags: 'attachment',
       secure: true
@@ -163,7 +164,7 @@ app.get('/download/:publicId', async (req, res) => {
 
     // Gera a URL corretamente formatada
     const downloadUrl = cloudinary.url(cloudinaryPublicId, options);
-    
+
     // Redireciona para a URL do Cloudinary
     res.redirect(downloadUrl);
   } catch (err) {
@@ -194,7 +195,7 @@ app.delete('/photos/:publicId', async (req, res) => {
     // Deleta do banco de dados independente do resultado do Cloudinary
     await Photo.deleteOne({ public_id: publicId });
 
-    res.status(200).json({ 
+    res.status(200).json({
       success: true,
       message: 'Foto deletada com sucesso.',
       cloudinaryResult: cloudinaryResult.result
@@ -202,7 +203,7 @@ app.delete('/photos/:publicId', async (req, res) => {
 
   } catch (err) {
     console.error('Erro ao deletar foto:', err);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: 'Erro no servidor ao deletar a foto.',
       error: err.message
