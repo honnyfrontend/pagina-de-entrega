@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
+const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
@@ -16,24 +17,27 @@ cloudinary.config({
   api_secret: process.env.API_SECRET
 });
 
-// Conexão com MongoDB Atlas
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 5000
-})
-.then(() => console.log('Conectado ao MongoDB Atlas (usuariosdb) - Coleções: lumiere_photos e lumiere_batches'))
-.catch(err => {
-  console.error('Erro de conexão ao MongoDB:', err.message);
-  process.exit(1);
-});
+// Verificação das variáveis de ambiente
+console.log('Iniciando servidor com configuração:');
+console.log('PORT:', process.env.PORT);
+console.log('CLOUD_NAME:', process.env.CLOUD_NAME ? '***' : 'Não definido');
+console.log('MONGODB_URI:', process.env.MONGODB_URI ? 'mongodb+srv://***' : 'Não definido');
 
-// Esquemas específicos para o projeto Lumiere
+// Conexão com MongoDB Atlas
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://honnyfrontend:vfepaF1m0HEoDnME@cluster0.xlvez.mongodb.net/usuariosdb?retryWrites=true&w=majority';
+
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('✅ Conectado ao MongoDB Atlas (usuariosdb)'))
+  .catch(err => {
+    console.error('❌ Erro de conexão ao MongoDB:', err.message);
+    process.exit(1);
+  });
+
+// Esquemas do MongoDB
 const photoSchema = new mongoose.Schema({
   public_id: { type: String, required: true, unique: true },
   filename: { type: String, required: true },
   url: { type: String, required: true },
-  batch_id: { type: mongoose.Schema.Types.ObjectId, ref: 'LumiereBatch' },
   createdAt: { type: Date, default: Date.now }
 }, { collection: 'lumiere_photos' });
 
@@ -44,7 +48,6 @@ const batchSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 }, { collection: 'lumiere_batches' });
 
-// Modelos com prefixo Lumiere
 const LumierePhoto = mongoose.model('LumierePhoto', photoSchema);
 const LumiereBatch = mongoose.model('LumiereBatch', batchSchema);
 
@@ -57,31 +60,42 @@ const storage = new CloudinaryStorage({
     transformation: [{ width: 1920, height: 1080, crop: 'limit' }]
   })
 });
-const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
+
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+});
 
 // Middlewares
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Rotas
-app.post('/login', (req, res) => {
-  const { email, password } = req.body;
-  if (email === 'honnyfrontend@gmail.com' && password === 'senha123') {
-    return res.json({ message: 'Login bem-sucedido!' });
-  }
-  res.status(401).json({ message: 'Credenciais inválidas' });
+// Rotas de Frontend
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
-app.post('/upload', upload.array('photos', 10), async (req, res) => {
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+// Rotas da API
+app.post('/api/login', (req, res) => {
+  const { email, password } = req.body;
+  if (email === 'honnyfrontend@gmail.com' && password === 'senha123') {
+    return res.json({ success: true, message: 'Login bem-sucedido!' });
+  }
+  res.status(401).json({ success: false, message: 'Credenciais inválidas' });
+});
+
+app.post('/api/upload', upload.array('photos', 10), async (req, res) => {
   try {
-    // Criar um novo batch para este upload
     const batch = await LumiereBatch.create({
       name: `Upload ${new Date().toLocaleString()}`,
-      description: `Upload contendo ${req.files.length} arquivo(s)`
+      description: `Upload com ${req.files.length} arquivo(s)`
     });
 
-    // Processar cada foto e associar ao batch
     const uploadPromises = req.files.map(async file => {
       const photo = await LumierePhoto.create({
         public_id: file.filename,
@@ -89,8 +103,6 @@ app.post('/upload', upload.array('photos', 10), async (req, res) => {
         url: file.path,
         batch_id: batch._id
       });
-      
-      // Atualizar o batch com a referência da foto
       batch.photos.push(photo._id);
       return photo;
     });
@@ -99,40 +111,56 @@ app.post('/upload', upload.array('photos', 10), async (req, res) => {
     await batch.save();
 
     res.json({ 
+      success: true,
       message: `${req.files.length} arquivo(s) enviado(s) com sucesso!`,
       batchId: batch._id 
     });
   } catch (err) {
-    res.status(500).json({ message: 'Erro no upload: ' + err.message });
+    res.status(500).json({ 
+      success: false,
+      message: 'Erro no upload: ' + err.message 
+    });
   }
 });
 
-app.get('/photos', async (req, res) => {
+app.get('/api/photos', async (req, res) => {
   try {
     const photos = await LumierePhoto.find()
       .populate('batch_id', 'name description')
       .sort({ createdAt: -1 });
       
-    res.json({ photos });
+    res.json({ success: true, photos });
   } catch (err) {
-    res.status(500).json({ message: 'Erro ao buscar fotos: ' + err.message });
+    res.status(500).json({ 
+      success: false,
+      message: 'Erro ao buscar fotos: ' + err.message 
+    });
   }
 });
 
-app.get('/batches', async (req, res) => {
+app.get('/api/batches', async (req, res) => {
   try {
     const batches = await LumiereBatch.find()
       .populate('photos', 'filename url')
       .sort({ createdAt: -1 });
       
-    res.json({ batches });
+    res.json({ success: true, batches });
   } catch (err) {
-    res.status(500).json({ message: 'Erro ao buscar batches: ' + err.message });
+    res.status(500).json({ 
+      success: false,
+      message: 'Erro ao buscar batches: ' + err.message 
+    });
   }
 });
 
-// Iniciar servidor
-app.listen(process.env.PORT, () => {
-  console.log(`Servidor Lumiere rodando na porta ${process.env.PORT}`);
-  console.log(`Acesse: http://localhost:${process.env.PORT}`);
+// Rota de fallback para 404
+app.use((req, res) => {
+  res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+});
+
+// Inicialização do servidor
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor Lumiere rodando na porta ${PORT}`);
+  console.log(`🔗 Acesse: http://localhost:${PORT}`);
 });
