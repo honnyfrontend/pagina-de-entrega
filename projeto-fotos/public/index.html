@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | LUMIÈRE VISUALS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-logo">
+            <i class="fas fa-camera-retro logo-icon"></i>
+            LUMIÈRE VISUALS
+        </div>
+        <h2>Acesse sua conta</h2>
+        <form id="loginForm">
+            <div class="input-group">
+                <input type="email" id="email" name="email" placeholder=" " autocomplete="username" required>
+                <i class="fas fa-envelope"></i>
+                <label for="email">Email</label>
+            </div>
+            <div class="input-group">
+                <input type="password" id="password" name="password" placeholder=" " autocomplete="current-password" required>
+                <i class="fas fa-lock"></i>
+                <label for="password">Senha</label>
+            </div>
+            <button type="submit" class="submit-btn">Entrar</button>
+        </form>
+        <div id="message"></div>
+    </div>
+    <script src="/js/auth.js"></script>
+</body>
+</html>
