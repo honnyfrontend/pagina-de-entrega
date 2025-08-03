@@ -171,49 +171,6 @@ app.get('/api/batches', async (req, res) => {
   }
 });
 
-app.delete('/api/photos/:id', async (req, res) => {
-  try {
-    console.log(`Recebida requisição para deletar: ${req.params.id}`);
-
-    // Decodifique o ID da URL
-    const publicId = decodeURIComponent(req.params.id);
-
-    // 1. Remova do banco de dados
-    const photo = await LumierePhoto.findOneAndDelete({ public_id: publicId });
-
-    if (!photo) {
-      console.log('Foto não encontrada no banco de dados');
-      return res.status(404).json({
-        success: false,
-        message: 'Foto não encontrada no banco de dados'
-      });
-    }
-
-    // 2. Remova do Cloudinary
-    const cloudinaryResult = await cloudinary.uploader.destroy(publicId);
-    console.log('Resultado do Cloudinary:', cloudinaryResult);
-
-    if (cloudinaryResult.result !== 'ok') {
-      console.warn('Aviso: A imagem pode não ter sido removida do Cloudinary');
-    }
-
-    res.json({
-      success: true,
-      message: 'Foto deletada com sucesso!',
-      deletedPhoto: photo,
-      cloudinaryResult
-    });
-
-  } catch (err) {
-    console.error('Erro ao deletar foto:', err);
-    res.status(500).json({
-      success: false,
-      message: 'Erro interno ao deletar foto',
-      error: err.message
-    });
-  }
-});
-
 // Rota de fallback para 404
 app.use((req, res) => {
   res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
