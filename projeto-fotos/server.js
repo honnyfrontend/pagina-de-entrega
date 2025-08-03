@@ -70,11 +70,6 @@ const upload = multer({
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-// Middleware para garantir respostas JSON
-app.use((req, res, next) => {
-  res.setHeader('Content-Type', 'application/json');
-  next();
-});
 
 // Rotas de Frontend
 app.get('/', (req, res) => {

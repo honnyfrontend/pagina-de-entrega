@@ -134,54 +134,27 @@ document.addEventListener('DOMContentLoaded', () => {
         closeModal();
     };
 
-    window.deletePhoto = async function(publicId) {
-  if (!confirm(`Tem certeza que deseja deletar esta foto?`)) {
-    return;
-  }
+    window.deletePhoto = async function (publicId) {
+        if (!confirm(`Tem certeza que deseja deletar esta foto?`)) {
+            return;
+        }
 
-  try {
-    console.log(`Iniciando deleção da foto: ${publicId}`);
-    
-    // Codifique o publicId para URL
-    const encodedPublicId = encodeURIComponent(publicId);
-    const response = await fetch(`/api/photos/${encodedPublicId}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
+        try {
+            const response = await fetch(`/api/photos/${encodeURIComponent(publicId)}`, {
+                method: 'DELETE'
+            });
 
-    // Verifique se a resposta é JSON
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      const text = await response.text();
-      throw new Error(`Resposta inesperada: ${text.substring(0, 100)}...`);
-    }
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Erro ao deletar a foto.');
+            }
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || `Erro HTTP: ${response.status}`);
-    }
-
-    console.log('Foto deletada com sucesso:', result);
-    alert(result.message || 'Foto deletada com sucesso!');
-    
-    // Recarregue a galeria
-    loadPhotos();
-    
-  } catch (error) {
-    console.error('Erro detalhado ao deletar:', error);
-    alert(`Falha ao deletar foto: ${error.message}`);
-    
-    // Mostre o erro na interface
-    photoGallery.innerHTML = `
-      <div class="error-message">
-        <p>Erro ao deletar foto</p>
-        <small>${error.message}</small>
-        <button onclick="loadPhotos()" class="retry-btn">Recarregar Galeria</button>
-      </div>
-    `;
-  }
-};
+            const result = await response.json();
+            alert(result.message || 'Foto deletada com sucesso!');
+            loadPhotos();
+        } catch (error) {
+            console.error('Erro ao deletar foto:', error);
+            alert(error.message || 'Erro ao conectar com o servidor para deletar a foto.');
+        }
+    };
 });
