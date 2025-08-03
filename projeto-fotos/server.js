@@ -61,7 +61,7 @@ const storage = new CloudinaryStorage({
   })
 });
 
-const upload = multer({ 
+const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB
 });
@@ -110,30 +110,48 @@ app.post('/api/upload', upload.array('photos', 10), async (req, res) => {
     await Promise.all(uploadPromises);
     await batch.save();
 
-    res.json({ 
+    res.json({
       success: true,
       message: `${req.files.length} arquivo(s) enviado(s) com sucesso!`,
-      batchId: batch._id 
+      batchId: batch._id
     });
   } catch (err) {
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: 'Erro no upload: ' + err.message 
+      message: 'Erro no upload: ' + err.message
     });
   }
 });
 
 app.get('/api/photos', async (req, res) => {
   try {
-    const photos = await LumierePhoto.find()
-      .populate('batch_id', 'name description')
-      .sort({ createdAt: -1 });
-      
-    res.json({ success: true, photos });
+    console.log('Acessando endpoint /api/photos'); // Log para debug
+    const photos = await LumierePhoto.find().sort({ createdAt: -1 }).lean();
+    console.log('Fotos encontradas:', photos.length); // Log para debug
+
+    if (!photos || photos.length === 0) {
+      return res.status(200).json({
+        success: true,
+        photos: [],
+        message: 'Nenhuma foto encontrada'
+      });
+    }
+
+    res.json({
+      success: true,
+      photos: photos.map(photo => ({
+        public_id: photo.public_id,
+        filename: photo.filename,
+        url: photo.url,
+        createdAt: photo.createdAt
+      }))
+    });
   } catch (err) {
-    res.status(500).json({ 
+    console.error('Erro no servidor:', err); // Log detalhado
+    res.status(500).json({
       success: false,
-      message: 'Erro ao buscar fotos: ' + err.message 
+      message: 'Erro interno ao buscar fotos',
+      error: err.message // Adicionando detalhes do erro
     });
   }
 });
@@ -143,12 +161,12 @@ app.get('/api/batches', async (req, res) => {
     const batches = await LumiereBatch.find()
       .populate('photos', 'filename url')
       .sort({ createdAt: -1 });
-      
+
     res.json({ success: true, batches });
   } catch (err) {
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: 'Erro ao buscar batches: ' + err.message 
+      message: 'Erro ao buscar batches: ' + err.message
     });
   }
 });

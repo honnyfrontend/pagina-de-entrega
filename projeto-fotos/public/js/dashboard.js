@@ -4,14 +4,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const photoGallery = document.getElementById('photo-gallery');
     const uploadForm = document.getElementById('uploadForm');
     const downloadModal = document.getElementById('downloadModal');
-    
+
     let currentDownloadPublicId = '';
     let currentDownloadFilename = '';
 
     // Event Listeners
     fileInput.addEventListener('change', updateFileNames);
     uploadForm.addEventListener('submit', handleUpload);
-    
+
     // Load photos on page load
     loadPhotos();
 
@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 body: formData
             });
-            
+
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'Erro ao fazer o upload.');
@@ -62,22 +62,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadPhotos() {
         try {
+            console.log('Iniciando carregamento de fotos...');
             const response = await fetch('/api/photos');
-            
+
             if (!response.ok) {
-                throw new Error('Erro ao carregar fotos');
+                const errorData = await response.json();
+                console.error('Resposta não OK:', errorData);
+                throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
             }
-            
+
             const result = await response.json();
-            
-            if (!result.photos) {
-                throw new Error('Formato de dados inválido');
+            console.log('Dados recebidos:', result);
+
+            if (!result.success) {
+                throw new Error(result.message || 'Resposta não bem-sucedida');
             }
 
             photoGallery.innerHTML = '';
-            
-            if (result.photos.length === 0) {
-                photoGallery.innerHTML = '<p>Nenhuma foto encontrada.</p>';
+
+            if (!result.photos || result.photos.length === 0) {
+                photoGallery.innerHTML = '<p class="empty-message">Nenhuma foto encontrada.</p>';
                 return;
             }
 
@@ -90,41 +94,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 const photoCard = document.createElement('div');
                 photoCard.className = 'photo-card';
                 photoCard.innerHTML = `
-                    <img src="${photo.url}" alt="${photo.filename}" loading="lazy">
-                    <div class="action-buttons">
-                        <button class="action-btn download-btn" onclick="openModal('${photo.public_id}', '${photo.filename}')">
-                            <i class="fas fa-download"></i>
-                        </button>
-                        <button class="action-btn delete-btn" onclick="deletePhoto('${photo.public_id}')">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </div>
-                `;
+                <img src="${photo.url}" alt="${photo.filename}" loading="lazy">
+                <div class="action-buttons">
+                    <button class="action-btn download-btn" onclick="openModal('${photo.public_id}', '${photo.filename}')">
+                        <i class="fas fa-download"></i>
+                    </button>
+                    <button class="action-btn delete-btn" onclick="deletePhoto('${photo.public_id}')">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            `;
                 photoGallery.appendChild(photoCard);
             });
         } catch (error) {
-            console.error('Erro ao carregar fotos:', error);
-            photoGallery.innerHTML = `<p>Erro ao carregar fotos: ${error.message}</p>`;
+            console.error('Erro detalhado:', error);
+            photoGallery.innerHTML = `
+            <div class="error-message">
+                <p>Erro ao carregar fotos</p>
+                <small>${error.message}</small>
+                <button onclick="loadPhotos()" class="retry-btn">Tentar novamente</button>
+            </div>
+        `;
         }
     }
 
-    window.openModal = function(publicId, filename) {
+    window.openModal = function (publicId, filename) {
         currentDownloadPublicId = publicId;
         currentDownloadFilename = filename;
         downloadModal.style.display = 'flex';
     };
 
-    window.closeModal = function() {
+    window.closeModal = function () {
         downloadModal.style.display = 'none';
     };
 
-    window.downloadPhoto = function(quality) {
+    window.downloadPhoto = function (quality) {
         const downloadUrl = `/api/download/${encodeURIComponent(currentDownloadPublicId)}?quality=${quality}`;
         window.open(downloadUrl, '_blank');
         closeModal();
     };
 
-    window.deletePhoto = async function(publicId) {
+    window.deletePhoto = async function (publicId) {
         if (!confirm(`Tem certeza que deseja deletar esta foto?`)) {
             return;
         }
