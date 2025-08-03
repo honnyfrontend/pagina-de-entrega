@@ -63,7 +63,7 @@
         }
         .input-group input {
             width: 100%;
-            padding: 15px;
+            padding: 15px 15px 15px 45px;
             border: 1px solid #ddd;
             border-radius: 5px;
             font-size: 1rem;
@@ -174,8 +174,7 @@
                 if (response.ok) {
                     messageDiv.textContent = result.message;
                     messageDiv.className = 'success';
-                    // Redireciona para o dashboard após um login bem-sucedido
-                    window.location.href = 'dashboard.html';
+                    window.location.href = '/dashboard';
                 } else {
                     messageDiv.textContent = result.message;
                     messageDiv.className = 'error';

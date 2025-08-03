@@ -1,14 +1,11 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard | LUMIÈRE VISUALS</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #0a0a0a;
@@ -19,13 +16,11 @@
             --light-text: #f8f8f8;
             --transition: all 0.5s cubic-bezier(0.65, 0, 0.35, 1);
         }
-
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
             font-family: 'Montserrat', sans-serif;
             color: var(--text);
@@ -37,7 +32,6 @@
             min-height: 100vh;
             padding: 40px;
         }
-
         .dashboard-header {
             width: 100%;
             max-width: 900px;
@@ -46,7 +40,6 @@
             align-items: center;
             margin-bottom: 40px;
         }
-
         .dashboard-logo {
             font-family: 'Playfair Display', serif;
             font-size: 2rem;
@@ -55,13 +48,11 @@
             display: flex;
             align-items: center;
         }
-
         .logo-icon {
             color: var(--accent);
             margin-right: 10px;
             font-size: 2rem;
         }
-
         .logout-btn {
             background-color: transparent;
             border: 2px solid var(--accent);
@@ -74,12 +65,10 @@
             cursor: pointer;
             transition: var(--transition);
         }
-
         .logout-btn:hover {
             background-color: var(--accent);
             color: var(--light-text);
         }
-
         .container {
             width: 100%;
             max-width: 900px;
@@ -89,24 +78,20 @@
             padding: 40px;
             text-align: center;
         }
-
         h1 {
             font-family: 'Playfair Display', serif;
             font-size: 2.5rem;
             margin-bottom: 20px;
             color: var(--primary);
         }
-
         #uploadForm {
             margin-bottom: 40px;
             border-bottom: 1px solid #eee;
             padding-bottom: 40px;
         }
-
         #fileInput {
             display: none;
         }
-
         .custom-file-upload {
             display: inline-block;
             padding: 15px 30px;
@@ -119,25 +104,21 @@
             margin-bottom: 10px;
             border: none;
         }
-
         .custom-file-upload:hover {
             background-color: var(--dark-accent);
             transform: translateY(-3px);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
-
         #file-names {
             margin-bottom: 20px;
             color: #666;
             font-style: italic;
         }
-
         #photo-gallery {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
         }
-
         .photo-card {
             border: 1px solid #ddd;
             border-radius: 5px;
@@ -146,19 +127,16 @@
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
             transition: var(--transition);
         }
-
         .photo-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
         }
-
         .photo-card img {
             width: 100%;
             height: 200px;
             object-fit: cover;
             display: block;
         }
-
         .action-buttons {
             position: absolute;
             top: 10px;
@@ -166,7 +144,6 @@
             display: flex;
             gap: 5px;
         }
-
         .action-btn {
             background: rgba(0, 0, 0, 0.5);
             color: white;
@@ -183,22 +160,17 @@
             transform: scale(0.8);
             transition: all 0.3s ease;
         }
-
         .photo-card:hover .action-btn {
             opacity: 1;
             visibility: visible;
             transform: scale(1);
         }
-
         .download-btn {
             background: var(--accent);
         }
-
         .delete-btn {
             background: #dc3545;
         }
-
-        /* --- Modal de Download --- */
         .modal {
             display: none;
             position: fixed;
@@ -211,7 +183,6 @@
             align-items: center;
             justify-content: center;
         }
-
         .modal-content {
             background-color: white;
             padding: 30px;
@@ -221,20 +192,17 @@
             width: 90%;
             max-width: 400px;
         }
-
         .modal-content h3 {
             font-family: 'Playfair Display', serif;
             margin-bottom: 20px;
             color: var(--primary);
         }
-
         .quality-options {
             display: flex;
             flex-direction: column;
             gap: 15px;
             margin-bottom: 20px;
         }
-
         .quality-btn {
             background-color: var(--secondary);
             border: 2px solid var(--accent);
@@ -245,47 +213,41 @@
             cursor: pointer;
             transition: var(--transition);
         }
-
         .quality-btn:hover {
             background-color: var(--accent);
             color: var(--light-text);
         }
-
         @media (max-width: 768px) {
             body {
                 padding: 20px;
             }
-
             .dashboard-header {
                 flex-direction: column;
                 gap: 20px;
             }
-
             .container {
                 padding: 30px;
             }
-
             h1 {
                 font-size: 2rem;
             }
         }
     </style>
 </head>
-
 <body>
     <header class="dashboard-header">
         <div class="dashboard-logo">
             <i class="fas fa-camera-retro logo-icon"></i>
             LUMIÈRE VISUALS
         </div>
-        <button class="logout-btn" onclick="location.href='login.html'">
+        <button class="logout-btn" onclick="location.href='/'">
             <i class="fas fa-sign-out-alt"></i> Sair
         </button>
     </header>
 
     <div class="container">
         <h1>Gerenciar Fotos</h1>
-        <form id="uploadForm">
+        <form id="uploadForm" enctype="multipart/form-data">
             <label for="fileInput" class="custom-file-upload">
                 <i class="fas fa-upload"></i> Escolher Fotos
             </label>
@@ -437,11 +399,7 @@
 
             try {
                 const response = await fetch(`/photos/${encodeURIComponent(publicId)}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    }
+                    method: 'DELETE'
                 });
 
                 if (!response.ok) {

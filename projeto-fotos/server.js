@@ -6,6 +6,7 @@ const path = require('path');
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('cloudinary').v2;
+const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
@@ -13,211 +14,185 @@ const PORT = process.env.PORT || 3000;
 
 // Configurar Cloudinary
 cloudinary.config({
-  cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.API_KEY,
-  api_secret: process.env.API_SECRET,
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.API_KEY,
+  api_secret: process.env.API_SECRET,
 });
+
+// Configurar middlewares
+app.use(cors());
+app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Conectar ao MongoDB
 mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
+  useNewUrlParser: true,
+  useUnifiedTopology: true
 })
-  .then(() => console.log('Conectado ao MongoDB'))
-  .catch(err => console.error('Erro ao conectar ao MongoDB:', err));
+  .then(() => console.log('Conectado ao MongoDB'))
+  .catch(err => console.error('Erro ao conectar ao MongoDB:', err));
 
 // Esquema do Mongoose para as fotos
 const photoSchema = new mongoose.Schema({
-  public_id: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  filename: {
-    type: String,
-    required: true
-  },
-  url: {
-    type: String,
-    required: true
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
+  public_id: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  filename: {
+    type: String,
+    required: true
+  },
+  url: {
+    type: String,
+    required: true
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
 });
 
 const Photo = mongoose.model('Photo', photoSchema);
 
-// Configurar middlewares
-app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, 'public')));
-
 // Configuração do Multer para upload de arquivos com Cloudinary
 const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: (req, file) => {
-    const publicId = `lumiere-visuals-photos/${uuidv4()}`;
-    return {
-      folder: 'lumiere-visuals-photos',
-      format: 'auto',
-      transformation: [{ width: 1920, height: 1080, crop: 'limit' }],
-      public_id: publicId,
-    };
-  }
+  cloudinary: cloudinary,
+  params: (req, file) => {
+    const publicId = `lumiere-visuals-photos/${uuidv4()}`;
+    return {
+      folder: 'lumiere-visuals-photos',
+      format: 'auto',
+      transformation: [{ width: 1920, height: 1080, crop: 'limit' }],
+      public_id: publicId,
+    };
+  }
 });
 
 const upload = multer({
-  storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // Limite de 10MB
+  storage: storage,
+  limits: { fileSize: 10 * 1024 * 1024 } // Limite de 10MB
 });
 
-// Rota de login simulada
-app.post('/login', (req, res) => {
-  const { email, password } = req.body;
-  if (email === 'honnyfrontend@gmail.com' && password === 'senha123') {
-    return res.status(200).json({ message: 'Login bem-sucedido!' });
-  } else {
-    return res.status(401).json({ message: 'Credenciais inválidas' });
-  }
+// Rotas
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
-// Rota de upload de fotos
-app.post('/upload', upload.array('photos', 10), async (req, res) => {
-  try {
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ message: 'Nenhum arquivo enviado.' });
-    }
-
-    const uploadPromises = req.files.map(async (file) => {
-      const newPhoto = new Photo({
-        public_id: file.filename,
-        filename: file.originalname,
-        url: file.path
-      });
-      return newPhoto.save();
-    });
-
-    await Promise.all(uploadPromises);
-    res.status(200).json({ message: 'Uploads realizados com sucesso!' });
-  } catch (err) {
-    console.error('Erro no upload:', err);
-    res.status(500).json({
-      message: err.message || 'Erro no servidor ao processar o upload.'
-    });
-  }
-});
-
-// Rota para listar fotos
-app.get('/photos', async (req, res) => {
-  try {
-    const photos = await Photo.find({}).sort({ createdAt: -1 });
-
-    if (!photos || photos.length === 0) {
-      return res.status(200).json({ photos: [], message: 'Nenhuma foto encontrada.' });
-    }
-
-    res.status(200).json({ photos });
-  } catch (err) {
-    console.error('Erro ao buscar fotos:', err);
-    res.status(500).json({ message: 'Erro no servidor ao buscar fotos.' });
-  }
-});
-
-// Rota para download de fotos
-app.get('/download/:publicId', async (req, res) => {
-  try {
-    const { publicId } = req.params;
-    const { quality } = req.query;
-
-    if (!publicId) {
-      return res.status(400).json({ message: 'ID da foto não fornecido.' });
-    }
-
-    const photo = await Photo.findOne({ public_id: publicId });
-    if (!photo) {
-      return res.status(404).json({ message: 'Foto não encontrada.' });
-    }
-
-    let options = {
-      flags: 'attachment',
-      secure: true,
-      resource_type: 'image'
-    };
-
-    if (quality && quality !== 'original') {
-      if (quality === 'small') {
-        options.width = 720;
-        options.quality = 70;
-      } else if (quality === 'medium') {
-        options.width = 1080;
-        options.quality = 80;
-      }
-    }
-
-    const downloadUrl = cloudinary.url(publicId, options);
-
-    res.redirect(downloadUrl);
-  } catch (err) {
-    console.error('Erro no download:', err);
-    res.status(500).json({ message: 'Erro no servidor ao processar o download.' });
-  }
-});
-
-// Rota para deletar fotos
-app.delete('/photos/:publicId', async (req, res) => {
-  try {
-    const { publicId } = req.params;
-
-    if (!publicId) {
-      return res.status(400).json({ message: 'ID da foto não fornecido.' });
-    }
-
-    // Tenta deletar do Cloudinary
-    const cloudinaryResult = await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
-    if (cloudinaryResult.result !== 'ok' && cloudinaryResult.result !== 'not found') {
-      console.warn('Erro ao deletar no Cloudinary:', cloudinaryResult);
-    }
-
-    // Deleta do banco de dados
-    const dbDeleteResult = await Photo.deleteOne({ public_id: publicId });
-    if (dbDeleteResult.deletedCount === 0) {
-      return res.status(404).json({ message: 'Foto não encontrada no banco de dados.' });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'Foto deletada com sucesso.',
-      cloudinaryResult: cloudinaryResult.result
-    });
-
-  } catch (err) {
-    console.error('Erro ao deletar foto:', err);
-    res.status(500).json({
-      success: false,
-      message: 'Erro no servidor ao deletar a foto.',
-      error: err.message
-    });
-  }
-});
-
-// Rota para servir o dashboard
 app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
-// Rota padrão para qualquer outra requisição
-app.use((req, res) => {
-  res.status(404).json({ message: 'Rota não encontrada.' });
+app.post('/login', (req, res) => {
+  const { email, password } = req.body;
+  if (email === 'honnyfrontend@gmail.com' && password === 'senha123') {
+    return res.status(200).json({ message: 'Login bem-sucedido!' });
+  }
+  return res.status(401).json({ message: 'Credenciais inválidas' });
 });
 
-// Middleware de tratamento de erros
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Erro interno no servidor.' });
+app.post('/upload', upload.array('photos', 10), async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: 'Nenhum arquivo enviado.' });
+    }
+
+    const uploadPromises = req.files.map(async (file) => {
+      const newPhoto = new Photo({
+        public_id: file.filename,
+        filename: file.originalname,
+        url: file.path
+      });
+      return newPhoto.save();
+    });
+
+    await Promise.all(uploadPromises);
+    res.status(200).json({ message: 'Uploads realizados com sucesso!' });
+  } catch (err) {
+    console.error('Erro no upload:', err);
+    res.status(500).json({
+      message: err.message || 'Erro no servidor ao processar o upload.'
+    });
+  }
+});
+
+app.get('/photos', async (req, res) => {
+  try {
+    const photos = await Photo.find({}).sort({ createdAt: -1 });
+    res.status(200).json({ photos: photos || [] });
+  } catch (err) {
+    console.error('Erro ao buscar fotos:', err);
+    res.status(500).json({ message: 'Erro no servidor ao buscar fotos.' });
+  }
+});
+
+app.get('/download/:publicId', async (req, res) => {
+  try {
+    const { publicId } = req.params;
+    const { quality } = req.query;
+
+    if (!publicId) {
+      return res.status(400).json({ message: 'ID da foto não fornecido.' });
+    }
+
+    const photo = await Photo.findOne({ public_id: publicId });
+    if (!photo) {
+      return res.status(404).json({ message: 'Foto não encontrada.' });
+    }
+
+    let options = {
+      flags: 'attachment',
+      secure: true,
+      resource_type: 'image'
+    };
+
+    if (quality && quality !== 'original') {
+      if (quality === 'small') {
+        options.width = 720;
+        options.quality = 70;
+      } else if (quality === 'medium') {
+        options.width = 1080;
+        options.quality = 80;
+      }
+    }
+
+    const downloadUrl = cloudinary.url(publicId, options);
+    res.redirect(downloadUrl);
+  } catch (err) {
+    console.error('Erro no download:', err);
+    res.status(500).json({ message: 'Erro no servidor ao processar o download.' });
+  }
+});
+
+app.delete('/photos/:publicId', async (req, res) => {
+  try {
+    const { publicId } = req.params;
+
+    if (!publicId) {
+      return res.status(400).json({ message: 'ID da foto não fornecido.' });
+    }
+
+    const cloudinaryResult = await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
+    const dbDeleteResult = await Photo.deleteOne({ public_id: publicId });
+    
+    if (dbDeleteResult.deletedCount === 0) {
+      return res.status(404).json({ message: 'Foto não encontrada no banco de dados.' });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Foto deletada com sucesso.'
+    });
+  } catch (err) {
+    console.error('Erro ao deletar foto:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Erro no servidor ao deletar a foto.'
+    });
+  }
 });
 
 // Iniciar o servidor
 app.listen(PORT, () => {
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
+  console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
