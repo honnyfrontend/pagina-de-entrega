@@ -70,6 +70,11 @@ const upload = multer({
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+// Middleware para garantir respostas JSON
+app.use((req, res, next) => {
+  res.setHeader('Content-Type', 'application/json');
+  next();
+});
 
 // Rotas de Frontend
 app.get('/', (req, res) => {
@@ -167,6 +172,49 @@ app.get('/api/batches', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erro ao buscar batches: ' + err.message
+    });
+  }
+});
+
+app.delete('/api/photos/:id', async (req, res) => {
+  try {
+    console.log(`Recebida requisição para deletar: ${req.params.id}`);
+
+    // Decodifique o ID da URL
+    const publicId = decodeURIComponent(req.params.id);
+
+    // 1. Remova do banco de dados
+    const photo = await LumierePhoto.findOneAndDelete({ public_id: publicId });
+
+    if (!photo) {
+      console.log('Foto não encontrada no banco de dados');
+      return res.status(404).json({
+        success: false,
+        message: 'Foto não encontrada no banco de dados'
+      });
+    }
+
+    // 2. Remova do Cloudinary
+    const cloudinaryResult = await cloudinary.uploader.destroy(publicId);
+    console.log('Resultado do Cloudinary:', cloudinaryResult);
+
+    if (cloudinaryResult.result !== 'ok') {
+      console.warn('Aviso: A imagem pode não ter sido removida do Cloudinary');
+    }
+
+    res.json({
+      success: true,
+      message: 'Foto deletada com sucesso!',
+      deletedPhoto: photo,
+      cloudinaryResult
+    });
+
+  } catch (err) {
+    console.error('Erro ao deletar foto:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno ao deletar foto',
+      error: err.message
     });
   }
 });
