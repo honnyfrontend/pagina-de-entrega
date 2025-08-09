@@ -156,17 +156,55 @@ app.get('/api/photos', async (req, res) => {
   }
 });
 
-app.get('/api/batches', async (req, res) => {
+app.get('/api/download/:public_id', async (req, res) => {
   try {
-    const batches = await LumiereBatch.find()
-      .populate('photos', 'filename url')
-      .sort({ createdAt: -1 });
+    const { public_id } = req.params;
+    const { quality } = req.query;
 
-    res.json({ success: true, batches });
+    let transformation = [];
+    if (quality === 'high') transformation = [{ quality: 'auto:good' }];
+    else if (quality === 'medium') transformation = [{ quality: 'auto:eco' }];
+    else if (quality === 'low') transformation = [{ quality: 'auto:low' }];
+
+    const photo = await LumierePhoto.findOne({ public_id });
+    if (!photo) {
+      return res.status(404).json({ success: false, message: 'Foto não encontrada' });
+    }
+
+    const downloadUrl = cloudinary.url(photo.public_id, {
+      transformation,
+      secure: true,
+      flags: 'attachment'
+    });
+
+    res.redirect(downloadUrl);
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: 'Erro ao buscar batches: ' + err.message
+      message: 'Erro ao gerar link de download: ' + err.message
+    });
+  }
+});
+
+app.delete('/api/photos/:public_id', async (req, res) => {
+  try {
+    const { public_id } = req.params;
+
+    // Primeiro deleta do Cloudinary
+    await cloudinary.uploader.destroy(public_id);
+
+    // Depois deleta do MongoDB
+    const result = await LumierePhoto.deleteOne({ public_id });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'Foto não encontrada' });
+    }
+
+    res.json({ success: true, message: 'Foto deletada com sucesso!' });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao deletar foto: ' + err.message
     });
   }
 });

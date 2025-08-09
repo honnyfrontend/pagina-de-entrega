@@ -94,27 +94,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 const photoCard = document.createElement('div');
                 photoCard.className = 'photo-card';
                 photoCard.innerHTML = `
-                <img src="${photo.url}" alt="${photo.filename}" loading="lazy">
-                <div class="action-buttons">
-                    <button class="action-btn download-btn" onclick="openModal('${photo.public_id}', '${photo.filename}')">
-                        <i class="fas fa-download"></i>
-                    </button>
-                    <button class="action-btn delete-btn" onclick="deletePhoto('${photo.public_id}')">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                </div>
-            `;
+                    <img src="${photo.url}" alt="${photo.filename}" loading="lazy">
+                    <div class="action-buttons">
+                        <button class="action-btn download-btn" onclick="openModal('${photo.public_id}', '${photo.filename}')">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="action-btn delete-btn" onclick="deletePhoto('${photo.public_id}')">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                `;
                 photoGallery.appendChild(photoCard);
             });
         } catch (error) {
             console.error('Erro detalhado:', error);
             photoGallery.innerHTML = `
-            <div class="error-message">
-                <p>Erro ao carregar fotos</p>
-                <small>${error.message}</small>
-                <button onclick="loadPhotos()" class="retry-btn">Tentar novamente</button>
-            </div>
-        `;
+                <div class="error-message">
+                    <p>Erro ao carregar fotos</p>
+                    <small>${error.message}</small>
+                    <button onclick="loadPhotos()" class="retry-btn">Tentar novamente</button>
+                </div>
+            `;
         }
     }
 

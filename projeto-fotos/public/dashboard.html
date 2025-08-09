@@ -3,33 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login | LUMIÈRE VISUALS</title>
+    <title>Dashboard | LUMIÈRE VISUALS</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-logo">
-            <i class="fas fa-camera-retro logo-icon"></i>
-            LUMIÈRE VISUALS
+    <div class="container">
+        <div class="dashboard-header">
+            <div class="dashboard-logo">
+                <i class="fas fa-camera-retro logo-icon"></i>
+                LUMIÈRE VISUALS
+            </div>
+            <button class="logout-btn" onclick="window.location.href='/'">
+                <i class="fas fa-sign-out-alt"></i> Sair
+            </button>
         </div>
-        <h2>Acesse sua conta</h2>
-        <form id="loginForm">
-            <div class="input-group">
-                <input type="email" id="email" name="email" placeholder=" " autocomplete="username" required>
-                <i class="fas fa-envelope"></i>
-                <label for="email">Email</label>
-            </div>
-            <div class="input-group">
-                <input type="password" id="password" name="password" placeholder=" " autocomplete="current-password" required>
-                <i class="fas fa-lock"></i>
-                <label for="password">Senha</label>
-            </div>
-            <button type="submit" class="submit-btn">Entrar</button>
+
+        <form id="uploadForm">
+            <h2>Enviar Fotos</h2>
+            <label for="fileInput" class="custom-file-upload">
+                <i class="fas fa-cloud-upload-alt"></i> Selecionar Arquivos
+            </label>
+            <input id="fileInput" type="file" name="photos" multiple accept="image/*">
+            <div id="file-names">Nenhum arquivo selecionado.</div>
+            <button type="submit" class="submit-btn">
+                <i class="fas fa-upload"></i> Enviar Fotos
+            </button>
         </form>
-        <div id="message"></div>
+
+        <h2>Galeria de Fotos</h2>
+        <div id="photo-gallery">
+            <p class="empty-message">Carregando fotos...</p>
+        </div>
     </div>
-    <script src="/js/auth.js"></script>
+
+    <!-- Modal de Download -->
+    <div class="modal" id="downloadModal">
+        <div class="modal-content">
+            <h3>Opções de Download</h3>
+            <p>Selecione a qualidade desejada:</p>
+            <div class="quality-options">
+                <button class="quality-btn" onclick="downloadPhoto('original')">Original (Máxima Qualidade)</button>
+                <button class="quality-btn" onclick="downloadPhoto('high')">Alta Qualidade (80%)</button>
+                <button class="quality-btn" onclick="downloadPhoto('medium')">Média Qualidade (60%)</button>
+                <button class="quality-btn" onclick="downloadPhoto('low')">Baixa Qualidade (40%)</button>
+            </div>
+            <button class="submit-btn" onclick="closeModal()">Cancelar</button>
+        </div>
+    </div>
+
+    <script src="/js/dashboard.js"></script>
 </body>
 </html>
